@@ -13,17 +13,10 @@ TOKENFILE = "slack.token"
 USERNAME = "pibot"
 
 def get_api_token():
-    """Fetch our API token from its gitignored file"""
-
-    with open(TOKENFILE) as f:
-        data = f.read()
-
-    # make sure we've removed any whitespace created when manually creating
-    # the token file
-    data = data.strip()
+    """Fetch our API token from the environment variable"""
 
     # return the results
-    return data
+    return os.environ.get('SLACK_BOT_TOKEN')
 
 
 def main():
