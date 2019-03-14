@@ -72,7 +72,7 @@ def handle_command(command, channel):
 
 
 def post_meme(channel):
-    with open('memes/ludicolo.jpg') as file_content:
+    with open('memes/ludicolo.jpg', 'rb') as file_content:
         slack_client.api_call(
             "files.upload",
             channels=channel,
