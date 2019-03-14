@@ -30,14 +30,7 @@ def main():
     slack_client = SlackClient(token)
 
     # now get our own ID
-    user_list = slack_client.api_call("users.list")
-    user_dict = {
-        user.get("name"): user.get("id")
-        for user in user_list.get("members")
-    }
-
-    slack_user_id = user_dict[USERNAME]
-    adrian_id = user_dict["adrian"]
+    slack_user_id = slack_client.api_call("auth.test")["user_id"]
 
     # now start a connection
     if slack_client.rtm_connect():
@@ -50,16 +43,14 @@ def main():
                 print("Message received: %s" % json.dumps(message, indent=2))
 
                 if "snek" in message["text"]:
-                    response = "cc"
-                    if message["user"] == adrian_id:
-                        choices = [
-                            "silly frosh, there's no such thing as snek",
-                            "snerk",
-                            "why are you like this",
-                            "go to bed frosh",
-                            "sad!",
-                        ]
-                        response = random.choice(choices)
+                    choices = [
+                        "silly frosh, there's no such thing as snek",
+                        "snerk",
+                        "why are you like this",
+                        "go to bed frosh",
+                        "sad!",
+                    ]
+                    response = random.choice(choices)
                     slack_client.api_call(
                         "chat.postMessage",
                         channel=message["channel"],
