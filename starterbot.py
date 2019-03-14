@@ -14,7 +14,7 @@ COMMAND1 = "do"
 COMMAND2 = "send"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
-
+users = {}
 def parse_bot_commands(slack_events):
     """
         Parses a list of events coming from the Slack RTM API to find bot commands.
@@ -22,11 +22,24 @@ def parse_bot_commands(slack_events):
         If its not found, then this function returns None, None.
     """
     for event in slack_events:
+        print event
         if event["type"] == "message" and not "subtype" in event:
             user_id, message = parse_direct_mention(event["text"])
             if user_id == starterbot_id:
                 return message, event["channel"]
+        if "files" in event and event["files"][0]["mimetype"].startswith("image"):
+            handle_image_post(event)
     return None, None
+
+def handle_image_post(event):
+    user_id = event['user']
+    image_id = event['files'][0]['name']
+    if user_id not in users:
+        users[user_id] = [image_id]
+    else:
+        users[user_id].append(image_id)
+
+    print users
 
 def parse_direct_mention(message_text):
     """
@@ -42,7 +55,7 @@ def handle_command(command, channel):
         Executes bot command if the command is known
     """
     # Default response is help text for the user
-    default_response = "Not sure what you mean. Try *{}*.".format(EXAMPLE_COMMAND)
+    default_response = "Not sure what you mean. Try *{}*.".format(COMMAND1)
 
     # Finds and executes the given command, filling in response
     response = None
