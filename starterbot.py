@@ -15,6 +15,15 @@ COMMAND2 = "stats"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 users = {}
+
+user_uplaods = {}
+
+def get_user_data(user_id):
+    return slack_client.api_call(
+        "users.info",
+        user=user_id
+    )
+
 def parse_bot_commands(slack_events):
     """
         Parses a list of events coming from the Slack RTM API to find bot commands.
@@ -35,9 +44,15 @@ def handle_image_post(event):
     user_id = event['user']
     image_id = event['files'][0]['name']
     if user_id not in users:
-        users[user_id] = [image_id]
+        res = get_user_data(user_id)
+        users[user_id] = res['user']
+        user_uplaods[users[user_id]['real_name']] = [image_id]
     else:
-        users[user_id].append(image_id)
+        if users[user_id]['real_name'] not in user_uplaods:
+
+            user_uplaods[users[user_id]['real_name']] = [image_id]
+        else:
+            user_uplaods[users[user_id]['real_name']].append(image_id)
 
     print users
 
@@ -63,7 +78,7 @@ def handle_command(command, channel):
     if command.startswith(COMMAND1):
         response = "Sure...write some more code then I can do that!"
     elif command.startswith(COMMAND2):
-        response = prepare_msg(users)
+        response = prepare_msg(user_uplaods)
 
     # Sends the response back to the channel
     slack_client.api_call(
@@ -73,7 +88,7 @@ def handle_command(command, channel):
     )
 
 def prepare_msg(user_hash):
-    res = "" 
+    res = ""
     for user in user_hash.keys():
         res += "User {} sent {} memez \n".format(user, len(user_hash[user]))
     return res
@@ -85,11 +100,11 @@ if __name__ == "__main__":
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         while True:
             command, channel = parse_bot_commands(slack_client.rtm_read())
-	    if command is not None:
-	       print 'got command ' + command
-	       print 'on channel ' + channel
+
             if command:
-                handle_command(command, channel)
+              print 'got command ' + command
+              print 'on channel ' + channel
+              handle_command(command, channel)
         time.sleep(RTM_READ_DELAY)
     else:
         print("Connection failed. Exception traceback printed above.")
