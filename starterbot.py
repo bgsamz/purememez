@@ -3,11 +3,17 @@ import time
 import re
 from slackclient import SlackClient
 import logging
+from meme_handler import (
+    download_meme,
+)
 
 logging.basicConfig()
+BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
+MEME_CHANNEL = None
+MEME_CHANNEL_NAME = "memez"
 
 # instantiate Slack client
-slack_client = SlackClient(os.environ.get('SLACK_BOT_TOKEN'))
+slack_client = SlackClient(BOT_TOKEN)
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
 
@@ -32,6 +38,12 @@ def parse_bot_commands(slack_events):
             user_id, message = parse_direct_mention(event["text"])
             if user_id == starterbot_id:
                 return message, event["channel"]
+        elif event["type"] == "file_shared":
+            file_id = event['file_id']
+            meme = download_meme(file_id, BOT_TOKEN, starterbot_id)
+            if meme:
+                post_meme(MEME_CHANNEL, meme)
+
     return None, None
 
 
@@ -71,8 +83,11 @@ def handle_command(command, channel):
     )
 
 
-def post_meme(channel):
-    with open('memes/ludicolo.jpg', 'rb') as file_content:
+def post_meme(channel, path=None):
+    if path is None:
+        path = 'memes/ludicolo.jpg'
+
+    with open(path, 'rb') as file_content:
         slack_client.api_call(
             "files.upload",
             channels=channel,
@@ -86,6 +101,10 @@ if __name__ == "__main__":
         print("Starter Bot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
+        channels = slack_client.api_call('channels.list')['channels']
+        for channel in channels:
+            if channel['name'] == MEME_CHANNEL_NAME:
+                MEME_CHANNEL = channel['id']
         while True:
             command, channel = parse_bot_commands(slack_client.rtm_read())
             if command is not None:
