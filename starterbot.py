@@ -11,7 +11,7 @@ starterbot_id = None
 # constants
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
 COMMAND1 = "do"
-COMMAND2 = "send"
+COMMAND2 = "stats"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 users = {}
@@ -63,7 +63,7 @@ def handle_command(command, channel):
     if command.startswith(COMMAND1):
         response = "Sure...write some more code then I can do that!"
     elif command.startswith(COMMAND2):
-        response = "Send what exactly? need more code"
+        response = prepare_msg(users)
 
     # Sends the response back to the channel
     slack_client.api_call(
@@ -72,6 +72,11 @@ def handle_command(command, channel):
         text=response or default_response
     )
 
+def prepare_msg(user_hash):
+    res = "" 
+    for user in user_hash.keys():
+        res += "User {} sent {} memez \n".format(user, len(user_hash[user]))
+    return res
 
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
