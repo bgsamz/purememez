@@ -11,7 +11,7 @@ from slackclient import SlackClient
 TOKENFILE = "slack.token"
 
 # the username of our bot
-USERNAME = "pibot"
+USERNAME = "memebot1000"
 
 def get_api_token():
     """Fetch our API token from the environment variable"""
