@@ -30,6 +30,8 @@ GET_MEMES = "get memes"
 BABY_SHARK = "alexa play baby shark"
 GET_RANDOM_MEMES = "get random meme"
 GET_MEMES_FROM = "<@(|[WU].+?)>"
+MEME_COMMAND = "!meme"
+UNMEME_COMMAND = "!unmeme"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 
@@ -43,11 +45,18 @@ def parse_bot_commands(slack_events):
     for event in slack_events:
         print(event)
         if event["type"] == "message" and "subtype" not in event and 'files' not in event:
-            user_id, message = parse_direct_mention(event["text"])
-            if user_id == starterbot_id:
-                return message, event["channel"]
-            elif event["text"].startswith(BABY_SHARK):
-                post_chat_message(event['channel'], 'https://youtu.be/XqZsoesa55w?t=9')
+            if "thread_ts" in event:
+                handle_thread_response(event)
+            else:
+                user_id, message = parse_direct_mention(event["text"])
+                if user_id == starterbot_id:
+                    return message, event["channel"]
+                elif event['text'].startswith(MEME_COMMAND):
+                    label = event['text'].split(MEME_COMMAND, 1)[1].strip()
+                    ts = DATABASE.get_meme_by_label(label)
+                    upload_file(readback_meme(ts), event['channel'], "<@{}> here's {}".format(event['user'], label))
+                elif event["text"].startswith(BABY_SHARK):
+                    post_chat_message(event['channel'], 'https://youtu.be/XqZsoesa55w?t=9')
         elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
             ts = download_meme(event, BOT_TOKEN)
             # Comment this out for now to remove readback
@@ -61,6 +70,15 @@ def parse_bot_commands(slack_events):
             DATABASE.remove_reaction(event)
 
     return None, None
+
+
+def handle_thread_response(event):
+    if event['text'].startswith(MEME_COMMAND):
+        label = event['text'].split(MEME_COMMAND, 1)[1].strip()
+        DATABASE.add_label(event['thread_ts'], label)
+    elif event['text'].startwith(UNMEME_COMMAND):
+        label = event['text'].split(UNMEME_COMMAND, 1)[1].strip()
+        DATABASE.remove_label(event['thread_ts'], label)
 
 
 def parse_direct_mention(message_text):
@@ -108,9 +126,10 @@ def handle_command(command, channel):
             upload_file(readback_meme(meme_ts), comment='Highest rated meme from: <@{}>'.format(user))
             return
 
-        for response in DATABASE.get_memes():
-            post_chat_message(channel, response)
-        return
+# Comment out for now
+        # for response in DATABASE.get_memes():
+        #     post_chat_message(channel, response)
+        # return
 
     # Sends the response back to the channel
     post_chat_message(channel, response or default_response)

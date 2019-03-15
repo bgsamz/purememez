@@ -10,58 +10,64 @@ class MemeDB:
         self.connection = sqlite3.connect(MEME_DB_PATH, isolation_level=None)
         self.connection.row_factory = sqlite3.Row
         self.cursor = self.connection.cursor()
-        self.cursor.execute("""
+        self.cursor.executescript("""
             CREATE TABLE IF NOT EXISTS meme_info (
-                ts TEXT,
+                ts TEXT NOT NULL PRIMARY KEY,
                 file_name TEXT,
                 file_type TEXT,
-                user TEXT,
-                reactions TEXT,
-                reaction_count INTEGER
+                user TEXT
+            );
+            
+            CREATE TABLE IF NOT EXISTS meme_reactions (
+                ts TEXT NOT NULL PRIMARY KEY REFERENCES meme_info(ts),
+                reaction TEXT,
+                count INTEGER
+            );
+            
+            CREATE TABLE IF NOT EXISTS meme_labels (
+                ts TEXT NOT NULL PRIMARY KEY REFERENCES meme_info(ts),
+                label TEXT
             );
         """)
 
     def add_reaction(self, reaction_event):
-        self.cursor.execute('SELECT reactions, reaction_count FROM meme_info WHERE ts=?',
-                            (reaction_event['item']['ts'],))
+        self.cursor.execute('SELECT * FROM meme_reactions WHERE ts=? AND reaction=?',
+                            (reaction_event['item']['ts'], reaction_event['reaction']))
         row = self.cursor.fetchone()
         if row:
-            reactions = json.loads(row['reactions'])
-            if reaction_event['reaction'] in reactions:
-                reactions[reaction_event['reaction']] += 1
-            else:
-                reactions[reaction_event['reaction']] = 1
-            new_reactions = json.dumps(reactions)
-            self.cursor.execute('UPDATE meme_info SET reactions=?, reaction_count=? WHERE ts=?',
-                                (new_reactions, row['reaction_count']+1, reaction_event['item']['ts']))
+            self.cursor.execute('UPDATE meme_reactions SET count=? WHERE ts=?',
+                                (row['count']+1, reaction_event['item']['ts']))
+        else:
+            self.cursor.execute('INSERT INTO meme_reactions (ts, reaction, count) VALUES (?,?,?)',
+                                (reaction_event['item']['ts'], reaction_event['reaction'], 1))
 
     def remove_reaction(self, reaction_event):
-        self.cursor.execute('SELECT reactions, reaction_count FROM meme_info WHERE ts=?',
-                            (reaction_event['item']['ts'],))
+        self.cursor.execute('SELECT * FROM meme_reactions WHERE ts=? AND reaction=?',
+                            (reaction_event['item']['ts'], reaction_event['reaction']))
         row = self.cursor.fetchone()
         if row:
-            reactions = json.loads(row['reactions'])
-            if reaction_event['reaction'] in reactions:
-                if reactions[reaction_event['reaction']] > 1:
-                    reactions[reaction_event['reaction']] -= 1
-                else:
-                    del reactions[reaction_event['reaction']]
+            if row['count'] > 1:
+                self.cursor.execute('UPDATE meme_reactions SET count=? WHERE ts=?',
+                                    (row['count']-1, reaction_event['item']['ts']))
             else:
-                return
-            new_reactions = json.dumps(reactions)
-            self.cursor.execute('UPDATE meme_info SET reactions=?, reaction_count=? WHERE ts=?',
-                                (new_reactions, row['reaction_count']-1, reaction_event['item']['ts']))
+                self.cursor.execute('DELETE FROM meme_reactions WHERE ts=? AND reaction=?',
+                                    (reaction_event['item']['ts'], reaction_event['reaction']))
+
+    def add_label(self, ts, label):
+        self.cursor.execute('INSERT INTO meme_labels (ts, label) VALUES (?,?)', (ts, label))
+
+    def remove_label(self, ts, label):
+        self.cursor.execute('DELETE FROM meme_labels WHERE ts=? AND label=?', (ts, label))
 
     def insert_meme(self, message_event):
-        self.cursor.execute('INSERT INTO meme_info (ts, file_name, file_type, user, reactions, reaction_count) '
-                            'VALUES (?,?,?,?,?,?)',
+        self.cursor.execute('INSERT INTO meme_info (ts, file_name, file_type, user) VALUES (?,?,?,?)',
                             (message_event['ts'], message_event['files'][0]['name'],
-                             message_event['files'][0]['filetype'], message_event['user'], '{}', 0))
+                             message_event['files'][0]['filetype'], message_event['user']))
 
     def delete_meme(self, delete_event):
         self.cursor.execute('DELETE FROM meme_info WHERE ts=?', (delete_event['ts'],))
 
-    def get_memes(self):
+    def get_meme_stats(self):
         self.cursor.execute('SELECT * FROM meme_info')
         rows = self.cursor.fetchall()
         messages = []
@@ -76,7 +82,8 @@ class MemeDB:
         return messages
 
     def get_highest_rated_from_user(self, user):
-        self.cursor.execute('SELECT * FROM meme_info WHERE user=? ORDER BY reaction_count DESC', (user,))
+        self.cursor.execute('SELECT ts FROM meme_info I JOIN meme_reactions R ON I.ts = R.ts '
+                            'WHERE user=? GROUP BY I.ts ORDER BY sum(count)', (user,))
         rows = self.cursor.fetchone()
         return rows['ts']
 
@@ -89,3 +96,8 @@ class MemeDB:
         self.cursor.execute('SELECT * FROM meme_info')
         rows = self.cursor.fetchall()
         return rows[random.randint(0, len(rows)-1)]['ts']
+
+    def get_meme_by_label(self, label):
+        self.cursor.execute('SELECT ts FROM meme_labels WHERE label=?', (label,))
+        row = self.cursor.fetchone()
+        return None if not row else row['ts']
