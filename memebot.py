@@ -1,4 +1,4 @@
-import os
+from config import BOT_TOKEN
 import time
 import re
 from slackclient import SlackClient
@@ -10,7 +10,7 @@ from meme_handler import (
 from meme_db import MemeDB
 
 logging.basicConfig()
-BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
+# BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
 MEME_CHANNEL = None
 MEME_CHANNEL_NAME = "memez"
 
@@ -144,7 +144,7 @@ def post_meme(channel, path=None):
 
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
-        print("Starter Bot connected and running!")
+        print("MemeBot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         channels = slack_client.api_call('channels.list')['channels']
