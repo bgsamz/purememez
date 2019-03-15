@@ -19,13 +19,13 @@ class MemeDB:
             );
             
             CREATE TABLE IF NOT EXISTS meme_reactions (
-                ts TEXT NOT NULL PRIMARY KEY REFERENCES meme_info(ts),
+                ts TEXT NOT NULL REFERENCES meme_info(ts),
                 reaction TEXT,
                 count INTEGER
             );
             
             CREATE TABLE IF NOT EXISTS meme_labels (
-                ts TEXT NOT NULL PRIMARY KEY REFERENCES meme_info(ts),
+                ts TEXT NOT NULL REFERENCES meme_info(ts),
                 label TEXT
             );
         """)
@@ -104,9 +104,8 @@ class MemeDB:
         return None if not row else row['ts']
 
     def get_all_memes(self):
-        self.cursor.execute('SELECT * FROM meme_info '
-                            'LEFT JOIN meme_reactions ON meme_info.ts=meme_reactions.ts '
-                            'LEFT JOIN meme_labels ON meme_reactions.ts=meme_labels.ts '
+        self.cursor.execute('SELECT * FROM (meme_info LEFT JOIN meme_reactions ON meme_info.ts=meme_reactions.ts) '
+                            'LEFT JOIN meme_labels ON meme_info.ts=meme_labels.ts '
                             'GROUP BY meme_info.ts')
         rows = self.cursor.fetchall()
         condensed_rows = {}
