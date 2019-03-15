@@ -1,5 +1,6 @@
 import sqlite3
 import json
+import random
 
 MEME_DB_PATH = "memes.db"
 
@@ -70,11 +71,21 @@ class MemeDB:
             for key in reactions.keys():
                 key_list.append(':{}:(x{})'.format(key, reactions[key]))
             formatted_reactions = ','.join(key_list)
-            messages.append('Meme {} added by <@{}> with the {} reactions: {}'
+            messages.append('Meme {} added by <@{}> with {} reactions: {}'
                             .format(row['file_name'], row['user'], row['reaction_count'], formatted_reactions))
         return messages
 
-    def get_random_meme_from_user(self, user):
+    def get_highest_rated_from_user(self, user):
         self.cursor.execute('SELECT * FROM meme_info WHERE user=? ORDER BY reaction_count DESC', (user,))
         rows = self.cursor.fetchone()
         return rows['ts']
+
+    def get_random_meme_from_user(self, user):
+        self.cursor.execute('SELECT * FROM meme_info WHERE user=?', (user,))
+        rows = self.cursor.fetchall()
+        return rows[random.randint(0, len(rows)-1)]['ts']
+
+    def get_random_meme(self):
+        self.cursor.execute('SELECT * FROM meme_info')
+        rows = self.cursor.fetchall()
+        return rows[random.randint(0, len(rows)-1)]['ts']

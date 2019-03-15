@@ -27,6 +27,7 @@ COMMAND1 = "do"
 COMMAND2 = "send"
 COMMAND3 = "send meme"
 GET_MEMES = "get memes"
+GET_RANDOM_MEMES = "get random meme"
 GET_MEMES_FROM = "<@(|[WU].+?)>"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
@@ -86,11 +87,21 @@ def handle_command(command, channel):
         return
     elif command.startswith(COMMAND2):
         response = "Send what exactly? need more code"
-    elif command.startswith(GET_MEMES):
+    elif command.startswith(GET_RANDOM_MEMES):
         matches = re.search(GET_MEMES_FROM, command)
         if matches:
             user = matches.group(1)
             meme_ts = DATABASE.get_random_meme_from_user(user)
+            upload_file(readback_meme(meme_ts), comment='Random meme from: <@{}>'.format(user))
+            return
+        meme_ts = DATABASE.get_random_meme()
+        upload_file(readback_meme(meme_ts), comment='<!here> have a random meme!')
+        return
+    elif command.startswith(GET_MEMES):
+        matches = re.search(GET_MEMES_FROM, command)
+        if matches:
+            user = matches.group(1)
+            meme_ts = DATABASE.get_highest_rated_from_user(user)
             upload_file(readback_meme(meme_ts), comment='Highest rated meme from: <@{}>'.format(user))
             return
 
@@ -103,7 +114,7 @@ def handle_command(command, channel):
 
 
 def post_chat_message(channel, message):
-    slack_client.api_call(
+    return slack_client.api_call(
         "chat.postMessage",
         channel=channel,
         text=message,
@@ -111,10 +122,10 @@ def post_chat_message(channel, message):
     )
 
 
-def upload_file(file, channel=MEME_CHANNEL, comment=None):
-    slack_client.api_call(
+def upload_file(file, channel=None, comment=None):
+    return slack_client.api_call(
         "files.upload",
-        channels=channel,
+        channels=channel or MEME_CHANNEL,
         file=file,
         initial_comment=comment
     )
