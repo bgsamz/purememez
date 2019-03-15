@@ -38,19 +38,17 @@ def parse_bot_commands(slack_events):
     """
     for event in slack_events:
         print(event)
-        if event["type"] == "message" and not "subtype" in event:
+        if event["type"] == "message" and "subtype" not in event and 'files' not in event:
             user_id, message = parse_direct_mention(event["text"])
             if user_id == starterbot_id:
                 return message, event["channel"]
-        elif event["type"] == "file_shared":
-            file_id = event['file_id']
-            meme = download_meme(file_id, BOT_TOKEN, starterbot_id)
-            if meme:
-                post_meme(MEME_CHANNEL, meme)
-        elif event['type'] == 'reaction_added' and event['item']['type'] == 'file':
+        elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
+            meme = download_meme(event, BOT_TOKEN)
+            post_meme(MEME_CHANNEL, meme)
+        elif event['type'] == 'reaction_added' and event['item']['type'] == 'message':
             print("adding reaction")
             DATABASE.add_reaction(event)
-        elif event['type'] == 'reaction_removed' and event['item']['type'] == 'file':
+        elif event['type'] == 'reaction_removed' and event['item']['type'] == 'message':
             print("removing reaction")
             DATABASE.remove_reaction(event)
 

@@ -11,16 +11,15 @@ class MemeDB:
         self.cursor = self.connection.cursor()
         self.cursor.execute("""
             CREATE TABLE IF NOT EXISTS meme_info (
-                meme_id TEXT,
-                created INTEGER,
-                meme_name TEXT,
-                uploaded_by TEXT,
+                ts TEXT,
+                file_name TEXT,
+                user TEXT,
                 reactions TEXT
             );
         """)
 
     def add_reaction(self, reaction_event):
-        self.cursor.execute('SELECT reactions FROM meme_info WHERE meme_id=?', reaction_event['item']['file'])
+        self.cursor.execute('SELECT reactions FROM meme_info WHERE ts=?', (reaction_event['item']['ts'],))
         row = self.cursor.fetchone()
         if row:
             reactions = json.loads(row['reactions'])
@@ -28,11 +27,11 @@ class MemeDB:
                 reactions[reaction_event['reaction']] += 1
             else:
                 reactions[reaction_event['reaction']] = 1
-            new_reactions = json.dump(reactions)
-            self.cursor.execute('UPDATE meme_info SET reactions=? WHERE meme_id=?', (new_reactions, reaction_event['item']['file']))
+            new_reactions = json.dumps(reactions)
+            self.cursor.execute('UPDATE meme_info SET reactions=? WHERE ts=?', (new_reactions, reaction_event['item']['ts']))
 
     def remove_reaction(self, reaction_event):
-        self.cursor.execute('SELECT reactions FROM meme_info WHERE meme_id=?', reaction_event['item']['file'])
+        self.cursor.execute('SELECT reactions FROM meme_info WHERE ts=?', (reaction_event['item']['ts'],))
         row = self.cursor.fetchone()
         if row:
             reactions = json.loads(row['reactions'])
@@ -43,15 +42,15 @@ class MemeDB:
                     del reactions[reaction_event['reaction']]
             else:
                 return
-            new_reactions = json.dump(reactions)
-            self.cursor.execute('UPDATE meme_info SET reactions=? WHERE meme_id=?', (new_reactions, reaction_event['item']['file']))
+            new_reactions = json.dumps(reactions)
+            self.cursor.execute('UPDATE meme_info SET reactions=? WHERE ts=?', (new_reactions, reaction_event['item']['ts']))
 
-    def insert_meme(self, file):
-        self.cursor.execute('INSERT INTO meme_info (meme_id, created, meme_name, uploaded_by, reactions) VALUES (?,?,?,?,?)',
-                            (file['id'], file['created'], file['name'], file['user'], '{}'))
+    def insert_meme(self, message_event):
+        self.cursor.execute('INSERT INTO meme_info (ts, file_name, user, reactions) VALUES (?,?,?,?)',
+                            (message_event['ts'], message_event['files'][0]['name'], message_event['user'], '{}'))
 
-    def delete_meme(self, file):
-        self.cursor.execute('DELETE FROM meme_info WHERE meme_id=?', file['id'])
+    def delete_meme(self, delete_event):
+        self.cursor.execute('DELETE FROM meme_info WHERE ts=?', (delete_event['ts'],))
 
     def get_memes(self):
         self.cursor.execute('SELECT * FROM meme_info')
@@ -61,7 +60,7 @@ class MemeDB:
             reactions = json.loads(row['reactions'])
             key_list = []
             for key in reactions.keys():
-                key_list.append(':{}:'.format(key))
+                key_list.append(':{}:(x{})'.format(key, reactions[key]))
             formatted_reactions = ','.join(key_list)
-            messages.append('Meme {} added by {} with the following reactions: {}'.format(row['meme_name'], row['uploaded_by'], formatted_reactions))
+            messages.append('Meme {} added by {} with the following reactions: {}'.format(row['file_name'], row['user'], formatted_reactions))
         return messages
