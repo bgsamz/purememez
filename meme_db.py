@@ -62,5 +62,5 @@ class MemeDB:
             for key in reactions.keys():
                 key_list.append(':{}:(x{})'.format(key, reactions[key]))
             formatted_reactions = ','.join(key_list)
-            messages.append('Meme {} added by {} with the following reactions: {}'.format(row['file_name'], row['user'], formatted_reactions))
+            messages.append('Meme {} added by <@{}> with the following reactions: {}'.format(row['file_name'], row['user'], formatted_reactions))
         return messages
