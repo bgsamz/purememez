@@ -5,6 +5,7 @@ from slackclient import SlackClient
 import logging
 from meme_handler import (
     download_meme,
+    readback_meme
 )
 from meme_db import MemeDB
 
@@ -43,9 +44,14 @@ def parse_bot_commands(slack_events):
             if user_id == starterbot_id:
                 return message, event["channel"]
         elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
-            meme = download_meme(event, BOT_TOKEN)
-            if meme:
-                post_meme(MEME_CHANNEL, meme)
+            ts = download_meme(event, BOT_TOKEN)
+            if ts:
+                slack_client.api_call(
+                    "files.upload",
+                    channels=MEME_CHANNEL,
+                    file=readback_meme(ts),
+                    title="Test Meme"
+                )
         elif event['type'] == 'reaction_added' and event['item']['type'] == 'message':
             print("adding reaction")
             DATABASE.add_reaction(event)

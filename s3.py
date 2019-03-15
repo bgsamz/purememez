@@ -24,6 +24,7 @@ def get(bucket, key):
         resp = s3c.get_object(Bucket=bucket, Key=key)
         return resp['Body'].read()
     except Exception as e:
+        print(e)
         return None
 
 

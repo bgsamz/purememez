@@ -22,22 +22,20 @@ def download_meme(message_event, token):
     if extension not in SUPPORTED_FILE_EXTENSIONS:
         return None
 
-    path = 'memes/{}.{}'.format(message_event['ts'], extension)
+    download = requests.get(message_event['files'][0]['url_private'],
+                            headers={'Authorization': 'Bearer {}'.format(token)})
+    if download.ok:
+        print('Attempting to put file in bucket...')
+        s3.put_stream(MEME_BUCKET, message_event['ts'], download.content)
+        DATABASE.insert_meme(message_event)
+    else:
+        raise RuntimeError('Download failed.')
 
-    # meme = tempfile.TemporaryFile()
-    with open(path, 'wb') as meme:
-        download = requests.get(message_event['files'][0]['url_private'],
-                                headers={'Authorization': 'Bearer {}'.format(token)})
-        if download.ok:
-            meme.write(download.content)
-            DATABASE.insert_meme(message_event)
-        else:
-            raise RuntimeError('Download failed.')
+    return message_event['ts']
 
-    print('Attempting to put file in bucket...')
-    s3.put_file(MEME_BUCKET, path.split('/')[1], path)
 
-    return path
+def readback_meme(ts):
+    return s3.get(MEME_BUCKET, ts)
 
 
 def delete_meme_file(path):
