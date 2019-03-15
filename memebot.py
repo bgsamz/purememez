@@ -53,7 +53,7 @@ def parse_bot_commands(slack_events):
             else:
                 user_id, message = parse_direct_mention(event["text"])
                 if user_id == starterbot_id:
-                    return message, event["channel"]
+                    return message, event["channel"], event
                 elif event['text'].startswith(MEME_COMMAND):
                     label = event['text'].split(MEME_COMMAND, 1)[1].strip()
                     ts = DATABASE.get_meme_by_label(label)
@@ -75,7 +75,7 @@ def parse_bot_commands(slack_events):
             print("removing reaction")
             DATABASE.remove_reaction(event)
 
-    return None, None
+    return None, None, None
 
 
 def handle_thread_response(event):
@@ -97,7 +97,7 @@ def parse_direct_mention(message_text):
     return (matches.group(1), matches.group(2).strip()) if matches else (None, None)
 
 
-def handle_command(command, channel):
+def handle_command(command, channel, event=None):
     """
         Executes bot command if the command is known
     """
@@ -120,7 +120,8 @@ def handle_command(command, channel):
                 reactions = ','.join([':{}:(x{})'.format(reaction, count) for reaction, count in memes[meme]['reactions'].items()])
             upload_file(
                 readback_meme(meme),
-                comment='Meme from <@{}>\nWith labels {}\nWith reactions {}'.format(user, labels, reactions)
+                comment='Meme from <@{}>\nWith labels {}\nWith reactions {}'.format(user, labels, reactions),
+                thread_ts=event['ts']
             )
         return
     elif command.startswith(COMMAND3):
@@ -164,12 +165,13 @@ def post_chat_message(channel, message):
     )
 
 
-def upload_file(file, channel=None, comment=None):
+def upload_file(file, channel=None, comment=None, thread_ts=None):
     return slack_client.api_call(
         "files.upload",
         channels=channel or MEME_CHANNEL,
         file=file,
-        initial_comment=comment
+        initial_comment=comment,
+        thread_ts=thread_ts
     )
 
 
@@ -191,12 +193,12 @@ if __name__ == "__main__":
             if channel['name'] == MEME_CHANNEL_NAME:
                 MEME_CHANNEL = channel['id']
         while True:
-            command, channel = parse_bot_commands(slack_client.rtm_read())
+            command, channel, event = parse_bot_commands(slack_client.rtm_read())
             if command is not None:
                 print('got command ' + command)
                 print('on channel ' + channel)
                 if command:
-                    handle_command(command, channel)
+                    handle_command(command, channel, event=event)
             time.sleep(RTM_READ_DELAY)
     else:
         print("Connection failed. Exception traceback printed above.")
