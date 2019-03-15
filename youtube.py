@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import urllib.reqest import urlopen
+from urllib.request import urlopen
 
 
 def youtube_first_result(search):
