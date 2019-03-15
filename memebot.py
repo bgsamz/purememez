@@ -8,6 +8,7 @@ from meme_handler import (
     readback_meme
 )
 from meme_db import MemeDB
+from youtube import youtube_first_result
 
 logging.basicConfig()
 # BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
@@ -28,6 +29,7 @@ COMMAND2 = "send"
 COMMAND3 = "send meme"
 GET_MEMES = "get memes"
 BABY_SHARK = "alexa play baby shark"
+GUESS_YOUTUBE = "ok google play"
 GET_RANDOM_MEMES = "get random meme"
 GET_MEMES_FROM = "<@(|[WU].+?)>"
 MEME_COMMAND = "!meme"
@@ -57,6 +59,12 @@ def parse_bot_commands(slack_events):
                     upload_file(readback_meme(ts), event['channel'], "<@{}> here's {}".format(event['user'], label))
                 elif event["text"].startswith(BABY_SHARK):
                     post_chat_message(event['channel'], 'https://youtu.be/XqZsoesa55w?t=9')
+                elif event["text"].startswith(GUESS_YOUTUBE):
+                    video_query = event["text"].split(GUESS_YOUTUBE, 1)[1].strip()
+                    result = youtube_first_result(video_query)
+                    if result is None:
+                        result = "Sorry, I couldn't find that video"
+                    post_chat_message(event['channel'], result)
         elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
             ts = download_meme(event, BOT_TOKEN)
             # Comment this out for now to remove readback
