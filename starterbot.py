@@ -27,6 +27,7 @@ COMMAND1 = "do"
 COMMAND2 = "send"
 COMMAND3 = "send meme"
 GET_MEMES = "get memes"
+GET_MEMES_FROM = "<@(|[WU].+?)>"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 
@@ -90,6 +91,18 @@ def handle_command(command, channel):
     elif command.startswith(COMMAND2):
         response = "Send what exactly? need more code"
     elif command.startswith(GET_MEMES):
+        matches = re.search(GET_MEMES_FROM, command)
+        if matches:
+            user = matches.group(1)
+            meme_ts = DATABASE.get_random_meme_from_user(user)
+            slack_client.api_call(
+                "files.upload",
+                channels=MEME_CHANNEL,
+                file=readback_meme(meme_ts),
+                initial_comment='Highest rated meme from: <@{}>'.format(user)
+            )
+            return
+
         for response in DATABASE.get_memes():
             slack_client.api_call(
                 "chat.postMessage",
