@@ -44,7 +44,8 @@ def parse_bot_commands(slack_events):
                 return message, event["channel"]
         elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
             meme = download_meme(event, BOT_TOKEN)
-            post_meme(MEME_CHANNEL, meme)
+            if meme:
+                post_meme(MEME_CHANNEL, meme)
         elif event['type'] == 'reaction_added' and event['item']['type'] == 'message':
             print("adding reaction")
             DATABASE.add_reaction(event)

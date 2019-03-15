@@ -3,10 +3,23 @@ from meme_db import MemeDB
 
 SLACK_FILES_INFO = 'https://slack.com/api/files.info'
 DATABASE = MemeDB()
+SUPPORTED_FILE_EXTENSIONS = (
+    '.tif',
+    '.tiff',
+    '.gif',
+    '.jpeg',
+    '.jpg',
+    '.png',
+    '.pdf'
+)
 
 
 def download_meme(message_event, token):
-    path = 'memes/{}.{}'.format(message_event['ts'], message_event['files'][0]['filetype'])
+    extension = message_event['files'][0]['filetype']
+    if extension not in SUPPORTED_FILE_EXTENSIONS:
+        return None
+
+    path = 'memes/{}.{}'.format(message_event['ts'], extension)
 
     # meme = tempfile.TemporaryFile()
     with open(path, 'wb') as meme:
