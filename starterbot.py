@@ -87,7 +87,8 @@ def handle_command(command, channel):
             slack_client.api_call(
                 "chat.postMessage",
                 channel=channel,
-                text=response
+                text=response,
+                link_names=True
             )
         return
 
@@ -95,7 +96,8 @@ def handle_command(command, channel):
     slack_client.api_call(
         "chat.postMessage",
         channel=channel,
-        text=response or default_response
+        text=response or default_response,
+        link_names=True
     )
 
 

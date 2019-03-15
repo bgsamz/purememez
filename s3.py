@@ -16,6 +16,7 @@ def get_s3_client():
         s3c = boto3.client('s3')
     return s3c
 
+
 def get(bucket, key):
     s3c = get_s3_client()
     try:
