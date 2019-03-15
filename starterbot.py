@@ -6,6 +6,7 @@ import logging
 from meme_handler import (
     download_meme,
 )
+from meme_db import MemeDB
 
 logging.basicConfig()
 BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
@@ -16,6 +17,7 @@ MEME_CHANNEL_NAME = "memez"
 slack_client = SlackClient(BOT_TOKEN)
 # starterbot's user ID in Slack: value is assigned after the bot starts up
 starterbot_id = None
+DATABASE = MemeDB()
 
 # constants
 RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
@@ -23,6 +25,7 @@ EXAMPLE_COMMAND = "send meme"
 COMMAND1 = "do"
 COMMAND2 = "send"
 COMMAND3 = "send meme"
+GET_MEMES = "get memes"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 
@@ -34,6 +37,7 @@ def parse_bot_commands(slack_events):
         If its not found, then this function returns None, None.
     """
     for event in slack_events:
+        print(event)
         if event["type"] == "message" and not "subtype" in event:
             user_id, message = parse_direct_mention(event["text"])
             if user_id == starterbot_id:
@@ -43,6 +47,12 @@ def parse_bot_commands(slack_events):
             meme = download_meme(file_id, BOT_TOKEN, starterbot_id)
             if meme:
                 post_meme(MEME_CHANNEL, meme)
+        elif event['type'] == 'reaction_added' and event['item']['type'] == 'file':
+            print("adding reaction")
+            DATABASE.add_reaction(event)
+        elif event['type'] == 'reaction_removed' and event['item']['type'] == 'file':
+            print("removing reaction")
+            DATABASE.remove_reaction(event)
 
     return None, None
 
@@ -74,6 +84,14 @@ def handle_command(command, channel):
         return
     elif command.startswith(COMMAND2):
         response = "Send what exactly? need more code"
+    elif command.startswith(GET_MEMES):
+        for response in DATABASE.get_memes():
+            slack_client.api_call(
+                "chat.postMessage",
+                channel=channel,
+                text=response
+            )
+        return
 
     # Sends the response back to the channel
     slack_client.api_call(
@@ -115,5 +133,3 @@ if __name__ == "__main__":
             time.sleep(RTM_READ_DELAY)
     else:
         print("Connection failed. Exception traceback printed above.")
-
-

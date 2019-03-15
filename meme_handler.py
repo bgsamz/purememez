@@ -1,7 +1,9 @@
 import requests
 import tempfile
+from meme_db import MemeDB
 
 SLACK_FILES_INFO = 'https://slack.com/api/files.info'
+DATABASE = MemeDB()
 
 
 def download_meme(file_id, token, bot):
@@ -16,6 +18,7 @@ def download_meme(file_id, token, bot):
         download = requests.get(file['url_private'], headers={'Authorization': 'Bearer {}'.format(token)})
         if download.ok:
             meme.write(download.content)
+            DATABASE.insert_meme(file)
         else:
             raise RuntimeError('Download failed.')
 
