@@ -34,6 +34,7 @@ GET_RANDOM_MEMES = "get random meme"
 GET_MEMES_FROM = "<@(|[WU].+?)>"
 MEME_COMMAND = "!meme"
 UNMEME_COMMAND = "!unmeme"
+STATS = "stats"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 
@@ -66,10 +67,7 @@ def parse_bot_commands(slack_events):
                         result = "Sorry, I couldn't find that video"
                     post_chat_message(event['channel'], result)
         elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
-            ts = download_meme(event, BOT_TOKEN)
-            # Comment this out for now to remove readback
-            # if ts:
-            #     upload_file(readback_meme(ts))
+            download_meme(event, BOT_TOKEN)
         elif event['type'] == 'reaction_added' and event['item']['type'] == 'message':
             print("adding reaction")
             DATABASE.add_reaction(event)
@@ -111,6 +109,20 @@ def handle_command(command, channel):
     # This is where you start to implement more commands!
     if command.startswith(COMMAND1):
         response = "Sure...write some more code then I can do that!"
+    elif command.startswith(STATS):
+        memes = DATABASE.get_all_memes()
+        for meme in memes.keys():
+            user = memes[meme]['user']
+            labels, reactions = None, None
+            if memes[meme]['labels']:
+                labels = ','.join(['`' + label + '`' for label in memes[meme]['labels'] if label])
+            if memes[meme]['reactions']:
+                reactions = ','.join([':' + reaction + ':' + '(x' + str(count) + ')' for reaction, count in memes[meme]['reactions'].items() if reaction and count])
+            upload_file(
+                readback_meme(meme),
+                comment='Meme from <@{}>\nWith labels {}\nWith reactions {}'.format(user, labels, reactions)
+            )
+        return
     elif command.startswith(COMMAND3):
         post_meme(channel)
         return

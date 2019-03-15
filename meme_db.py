@@ -83,7 +83,7 @@ class MemeDB:
 
     def get_highest_rated_from_user(self, user):
         self.cursor.execute('SELECT meme_info.ts FROM meme_info '
-                            'LEFT JOIN meme_reactions ON meme_info.ts = meme_reactions.ts '
+                            'LEFT JOIN meme_reactions ON meme_info.ts=meme_reactions.ts '
                             'WHERE user=? GROUP BY meme_info.ts ORDER BY sum(count) DESC', (user,))
         rows = self.cursor.fetchone()
         return rows['ts']
@@ -102,3 +102,23 @@ class MemeDB:
         self.cursor.execute('SELECT ts FROM meme_labels WHERE label=?', (label,))
         row = self.cursor.fetchone()
         return None if not row else row['ts']
+
+    def get_all_memes(self):
+        self.cursor.execute('SELECT * FROM meme_info '
+                            'LEFT JOIN meme_reactions ON meme_info.ts=meme_reactions.ts '
+                            'LEFT JOIN meme_labels ON meme_reactions.ts=meme_labels.ts '
+                            'GROUP BY meme_info.ts')
+        rows = self.cursor.fetchall()
+        condensed_rows = {}
+        for row in rows:
+            if row['ts'] in condensed_rows:
+                condensed_rows[row['ts']]['reactions'][row['reaction']] = row['count']
+                condensed_rows[row['ts']]['labels'].append(row['label'])
+            else:
+                condensed_rows[row['ts']] = {'ts': row['ts'],
+                                             'file_name': row['file_name'],
+                                             'file_type': row['file_type'],
+                                             'user': row['user'],
+                                             'reactions': {row['reaction']: row['count']},
+                                             'labels': [row['label']]}
+        return condensed_rows
