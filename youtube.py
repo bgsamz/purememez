@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import urllib2
+import urllib.reqest import urlopen
 
 
 def youtube_first_result(search):
@@ -15,7 +15,7 @@ def youtube_first_result(search):
         query_url = "https://www.youtube.com/results?search_query={}&page=&utm_source=opensearch".format(query_params)
 
         # parse it
-        response = urllib2.urlopen(query_url)
+        response = urlopen(query_url)
         html = response.read()
 
         # look for the relevant blob
