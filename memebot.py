@@ -21,7 +21,7 @@ starterbot_id = None
 DATABASE = MemeDB()
 
 # constants
-RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
+RTM_READ_DELAY = 1  # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "send meme"
 COMMAND1 = "do"
 COMMAND2 = "send"
@@ -46,13 +46,9 @@ def parse_bot_commands(slack_events):
                 return message, event["channel"]
         elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
             ts = download_meme(event, BOT_TOKEN)
-            if ts:
-                slack_client.api_call(
-                    "files.upload",
-                    channels=MEME_CHANNEL,
-                    file=readback_meme(ts),
-                    title="Test Meme"
-                )
+            # Comment this out for now to remove readback
+            # if ts:
+            #     upload_file(readback_meme(ts))
         elif event['type'] == 'reaction_added' and event['item']['type'] == 'message':
             print("adding reaction")
             DATABASE.add_reaction(event)
@@ -95,29 +91,32 @@ def handle_command(command, channel):
         if matches:
             user = matches.group(1)
             meme_ts = DATABASE.get_random_meme_from_user(user)
-            slack_client.api_call(
-                "files.upload",
-                channels=MEME_CHANNEL,
-                file=readback_meme(meme_ts),
-                initial_comment='Highest rated meme from: <@{}>'.format(user)
-            )
+            upload_file(readback_meme(meme_ts), comment='Highest rated meme from: <@{}>'.format(user))
             return
 
         for response in DATABASE.get_memes():
-            slack_client.api_call(
-                "chat.postMessage",
-                channel=channel,
-                text=response,
-                link_names=True
-            )
+            post_chat_message(channel, response)
         return
 
     # Sends the response back to the channel
+    post_chat_message(channel, response or default_response)
+
+
+def post_chat_message(channel, message):
     slack_client.api_call(
         "chat.postMessage",
         channel=channel,
-        text=response or default_response,
+        text=message,
         link_names=True
+    )
+
+
+def upload_file(file, channel=MEME_CHANNEL, comment=None):
+    slack_client.api_call(
+        "files.upload",
+        channels=channel,
+        file=file,
+        initial_comment=comment
     )
 
 
@@ -126,12 +125,7 @@ def post_meme(channel, path=None):
         path = 'memes/ludicolo.jpg'
 
     with open(path, 'rb') as file_content:
-        slack_client.api_call(
-            "files.upload",
-            channels=channel,
-            file=file_content,
-            title="Test Meme"
-        )
+        upload_file(file_content, channel)
 
 
 if __name__ == "__main__":

@@ -35,6 +35,7 @@ def put_file(bucket, key, filename):
         return True
     except Exception as e:
         print(e)
+        return False
 
 
 def put_stream(bucket, key, bytes_object):
@@ -43,4 +44,5 @@ def put_stream(bucket, key, bytes_object):
         s3c.put_object(Bucket=bucket, Key=key, Body=bytes_object)
         return True
     except Exception as e:
+        print(e)
         return False
