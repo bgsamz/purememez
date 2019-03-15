@@ -27,6 +27,7 @@ COMMAND1 = "do"
 COMMAND2 = "send"
 COMMAND3 = "send meme"
 GET_MEMES = "get memes"
+BABY_SHARK = "alexa play baby shark"
 GET_RANDOM_MEMES = "get random meme"
 GET_MEMES_FROM = "<@(|[WU].+?)>"
 
@@ -45,6 +46,8 @@ def parse_bot_commands(slack_events):
             user_id, message = parse_direct_mention(event["text"])
             if user_id == starterbot_id:
                 return message, event["channel"]
+            elif event["text"].startswith(BABY_SHARK):
+                post_chat_message(event['channel'], 'https://youtu.be/XqZsoesa55w?t=9')
         elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
             ts = download_meme(event, BOT_TOKEN)
             # Comment this out for now to remove readback
