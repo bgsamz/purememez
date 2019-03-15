@@ -104,20 +104,25 @@ class MemeDB:
         return None if not row else row['ts']
 
     def get_all_memes(self):
-        self.cursor.execute('SELECT * FROM (meme_info LEFT JOIN meme_reactions ON meme_info.ts=meme_reactions.ts) '
-                            'LEFT JOIN meme_labels ON meme_info.ts=meme_labels.ts '
-                            'GROUP BY meme_info.ts')
-        rows = self.cursor.fetchall()
+        # Joins suck apparently, so query each table individually
+        self.cursor.execute('SELECT * FROM meme_info')
+        meme_info_rows = self.cursor.fetchall()
+        self.cursor.execute('SELECT * FROM meme_reactions')
+        meme_reaction_rows = self.cursor.fetchall()
+        self.cursor.execute('SELECT * FROM meme_labels')
+        meme_label_rows = self.cursor.fetchall()
+
         condensed_rows = {}
-        for row in rows:
-            if row['ts'] in condensed_rows:
-                condensed_rows[row['ts']]['reactions'][row['reaction']] = row['count']
-                condensed_rows[row['ts']]['labels'].append(row['label'])
-            else:
-                condensed_rows[row['ts']] = {'ts': row['ts'],
-                                             'file_name': row['file_name'],
-                                             'file_type': row['file_type'],
-                                             'user': row['user'],
-                                             'reactions': {row['reaction']: row['count']},
-                                             'labels': [row['label']]}
+        for row in meme_info_rows:
+            condensed_rows[row['ts']] = {'ts': row['ts'],
+                                         'file_name': row['file_name'],
+                                         'file_type': row['file_type'],
+                                         'user': row['user'],
+                                         'reactions': {},
+                                         'labels': []}
+        for row in meme_reaction_rows:
+            condensed_rows[row['ts']]['reactions'][row['reaction']] = row['count']
+        for row in meme_label_rows:
+            condensed_rows[row['ts']]['labels'].append(row['label'])
+
         return condensed_rows

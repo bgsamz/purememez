@@ -115,9 +115,9 @@ def handle_command(command, channel):
             user = memes[meme]['user']
             labels, reactions = None, None
             if memes[meme]['labels']:
-                labels = ','.join(['`' + label + '`' for label in memes[meme]['labels'] if label])
+                labels = ','.join(['`{}`'.format(label) for label in memes[meme]['labels']])
             if memes[meme]['reactions']:
-                reactions = ','.join([':' + reaction + ':' + '(x' + str(count) + ')' for reaction, count in memes[meme]['reactions'].items() if reaction and count])
+                reactions = ','.join([':{}:(x{})'.format(reaction, count) for reaction, count in memes[meme]['reactions'].items()])
             upload_file(
                 readback_meme(meme),
                 comment='Meme from <@{}>\nWith labels {}\nWith reactions {}'.format(user, labels, reactions)
