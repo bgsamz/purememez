@@ -82,8 +82,9 @@ class MemeDB:
         return messages
 
     def get_highest_rated_from_user(self, user):
-        self.cursor.execute('SELECT ts FROM meme_info I JOIN meme_reactions R ON I.ts = R.ts '
-                            'WHERE user=? GROUP BY I.ts ORDER BY sum(count)', (user,))
+        self.cursor.execute('SELECT meme_info.ts FROM meme_info '
+                            'LEFT JOIN meme_reactions ON meme_info.ts = meme_reactions.ts '
+                            'WHERE user=? GROUP BY meme_info.ts ORDER BY sum(count) DESC', (user,))
         rows = self.cursor.fetchone()
         return rows['ts']
 
