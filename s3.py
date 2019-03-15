@@ -2,6 +2,7 @@ import boto3
 
 import config
 
+
 def get_s3_client():
     if config.INSECURE_S3_ENABLED:
         s3c = boto3.client(
@@ -22,7 +23,8 @@ def get(bucket, key):
     try:
         resp = s3c.get_object(Bucket=bucket, Key=key)
         return resp['Body'].read()
-    except e:
+    except Exception as e:
+        print(e)
         return None
 
 
@@ -31,7 +33,8 @@ def put_file(bucket, key, filename):
     try:
         s3c.upload_file(Bucket=bucket, Key=key, Filename=filename)
         return True
-    except e:
+    except Exception as e:
+        print(e)
         return False
 
 
@@ -40,5 +43,6 @@ def put_stream(bucket, key, bytes_object):
     try:
         s3c.put_object(Bucket=bucket, Key=key, Body=bytes_object)
         return True
-    except e:
+    except Exception as e:
+        print(e)
         return False

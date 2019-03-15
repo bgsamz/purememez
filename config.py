@@ -1,10 +1,22 @@
 import os
+import json
 
-# Cough flashblade cough
-INSECURE_S3_ENABLED = os.getenv('INSECURE_S3_ENABLED') is not None
+FILEPATH = 'config.json'
 
-ACCESS_KEY = os.getenv('S3_ACCESS_KEY')
+data = None
+if os.path.exists(FILEPATH):
+    with open(FILEPATH) as config:
+        data = json.load(config)
 
-SECRET_KEY = os.getenv('S3_SECRET_KEY')
 
-S3_ENDPOINT = os.getenv('S3_ENDPOINT')
+def reader(field):
+    global data
+    return data[field] if data is not None else os.getenv(field)
+
+
+INSECURE_S3_ENABLED = reader('INSECURE_S3_ENABLED')
+ACCESS_KEY = reader('S3_ACCESS_KEY')
+SECRET_KEY = reader('S3_SECRET_KEY')
+S3_ENDPOINT = reader('S3_ENDPOINT')
+MEME_BUCKET = reader('BUCKET')
+BOT_TOKEN = reader('SLACK_BOT_TOKEN')

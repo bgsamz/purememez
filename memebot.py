@@ -1,15 +1,16 @@
-import os
+from config import BOT_TOKEN
 import time
 import re
 from slackclient import SlackClient
 import logging
 from meme_handler import (
     download_meme,
+    readback_meme
 )
 from meme_db import MemeDB
 
 logging.basicConfig()
-BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
+# BOT_TOKEN = os.environ.get('SLACK_BOT_TOKEN')
 MEME_CHANNEL = None
 MEME_CHANNEL_NAME = "memez"
 
@@ -20,12 +21,15 @@ starterbot_id = None
 DATABASE = MemeDB()
 
 # constants
-RTM_READ_DELAY = 1 # 1 second delay between reading from RTM
+RTM_READ_DELAY = 1  # 1 second delay between reading from RTM
 EXAMPLE_COMMAND = "send meme"
 COMMAND1 = "do"
 COMMAND2 = "send"
 COMMAND3 = "send meme"
 GET_MEMES = "get memes"
+BABY_SHARK = "alexa play baby shark"
+GET_RANDOM_MEMES = "get random meme"
+GET_MEMES_FROM = "<@(|[WU].+?)>"
 
 MENTION_REGEX = "^<@(|[WU].+?)>(.*)"
 
@@ -42,9 +46,13 @@ def parse_bot_commands(slack_events):
             user_id, message = parse_direct_mention(event["text"])
             if user_id == starterbot_id:
                 return message, event["channel"]
+            elif event["text"].startswith(BABY_SHARK):
+                post_chat_message(event['channel'], 'https://youtu.be/XqZsoesa55w?t=9')
         elif event["type"] == "message" and 'files' in event and event['user'] != starterbot_id:
-            meme = download_meme(event, BOT_TOKEN)
-            post_meme(MEME_CHANNEL, meme)
+            ts = download_meme(event, BOT_TOKEN)
+            # Comment this out for now to remove readback
+            # if ts:
+            #     upload_file(readback_meme(ts))
         elif event['type'] == 'reaction_added' and event['item']['type'] == 'message':
             print("adding reaction")
             DATABASE.add_reaction(event)
@@ -82,22 +90,47 @@ def handle_command(command, channel):
         return
     elif command.startswith(COMMAND2):
         response = "Send what exactly? need more code"
+    elif command.startswith(GET_RANDOM_MEMES):
+        matches = re.search(GET_MEMES_FROM, command)
+        if matches:
+            user = matches.group(1)
+            meme_ts = DATABASE.get_random_meme_from_user(user)
+            upload_file(readback_meme(meme_ts), comment='Random meme from: <@{}>'.format(user))
+            return
+        meme_ts = DATABASE.get_random_meme()
+        upload_file(readback_meme(meme_ts), comment='<!here> have a random meme!')
+        return
     elif command.startswith(GET_MEMES):
+        matches = re.search(GET_MEMES_FROM, command)
+        if matches:
+            user = matches.group(1)
+            meme_ts = DATABASE.get_highest_rated_from_user(user)
+            upload_file(readback_meme(meme_ts), comment='Highest rated meme from: <@{}>'.format(user))
+            return
+
         for response in DATABASE.get_memes():
-            slack_client.api_call(
-                "chat.postMessage",
-                channel=channel,
-                text=response,
-                link_names=True
-            )
+            post_chat_message(channel, response)
         return
 
     # Sends the response back to the channel
-    slack_client.api_call(
+    post_chat_message(channel, response or default_response)
+
+
+def post_chat_message(channel, message):
+    return slack_client.api_call(
         "chat.postMessage",
         channel=channel,
-        text=response or default_response,
+        text=message,
         link_names=True
+    )
+
+
+def upload_file(file, channel=None, comment=None):
+    return slack_client.api_call(
+        "files.upload",
+        channels=channel or MEME_CHANNEL,
+        file=file,
+        initial_comment=comment
     )
 
 
@@ -106,17 +139,12 @@ def post_meme(channel, path=None):
         path = 'memes/ludicolo.jpg'
 
     with open(path, 'rb') as file_content:
-        slack_client.api_call(
-            "files.upload",
-            channels=channel,
-            file=file_content,
-            title="Test Meme"
-        )
+        upload_file(file_content, channel)
 
 
 if __name__ == "__main__":
     if slack_client.rtm_connect(with_team_state=False):
-        print("Starter Bot connected and running!")
+        print("MemeBot connected and running!")
         # Read bot's user ID by calling Web API method `auth.test`
         starterbot_id = slack_client.api_call("auth.test")["user_id"]
         channels = slack_client.api_call('channels.list')['channels']
