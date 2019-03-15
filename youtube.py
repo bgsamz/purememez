@@ -16,7 +16,7 @@ def youtube_first_result(search):
 
         # parse it
         response = urlopen(query_url)
-        html = response.read()
+        html = str(response.read())
 
         # look for the relevant blob
         start_string = 'href="/watch?v='
@@ -24,7 +24,7 @@ def youtube_first_result(search):
 
         # find the indices
         start = html.find(start_string)
-        end = html.find(end_string)
+        end = html.find(end_string, start)
 
         # error check
         if start < 0 or end < 0:
@@ -33,5 +33,5 @@ def youtube_first_result(search):
         # return the right thing
         return "https://www.youtube.com/watch?v={}".format(html[start+len(start_string):end])
     except Exception as e:
-        # any kind of issue, just return None
+        print(e)
         return None
