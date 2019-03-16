@@ -86,17 +86,17 @@ class MemeDB:
                             'LEFT JOIN meme_reactions ON meme_info.ts=meme_reactions.ts '
                             'WHERE user=? GROUP BY meme_info.ts ORDER BY sum(count) DESC', (user,))
         rows = self.cursor.fetchone()
-        return rows['ts']
+        return None if not rows else rows['ts']
 
     def get_random_meme_from_user(self, user):
         self.cursor.execute('SELECT * FROM meme_info WHERE user=?', (user,))
         rows = self.cursor.fetchall()
-        return rows[random.randint(0, len(rows)-1)]['ts']
+        return None if not rows else rows[random.randint(0, len(rows)-1)]['ts']
 
     def get_random_meme(self):
         self.cursor.execute('SELECT * FROM meme_info')
         rows = self.cursor.fetchall()
-        return rows[random.randint(0, len(rows)-1)]['ts']
+        return None if not rows else rows[random.randint(0, len(rows)-1)]['ts']
 
     def get_meme_by_label(self, label):
         self.cursor.execute('SELECT ts FROM meme_labels WHERE label=?', (label,))
